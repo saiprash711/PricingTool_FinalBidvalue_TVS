@@ -80,33 +80,37 @@ st.markdown("""
     }
     
     .stat-pill {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 14px;
         text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
     .stat-val {
         font-size: 1.35rem;
-        font-weight: 700;
-        color: var(--text-color);
+        font-weight: 800;
+        color: #0f172a;
     }
     
     .stat-lbl {
         font-size: 0.78rem;
-        color: #94a3b8;
+        color: #475569;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 4px;
     }
     
     .caveat-box {
-        background: rgba(128, 128, 128, 0.1);
-        border-left: 4px solid #38bdf8;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #0284c7;
         padding: 16px 20px;
         border-radius: 0 12px 12px 0;
         margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -291,7 +295,7 @@ with tab_predict:
         <div class="stat-pill">
             <div class="stat-lbl">Comparable Market Baseline</div>
             <div class="stat-val">{format_inr(prediction['breakdown']['comparable_baseline_price'])}</div>
-            <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">{prediction['breakdown']['comparable_baseline_label']}</div>
+            <div style="color: #475569; font-size: 0.75rem; margin-top: 4px; font-weight: 600;">{prediction['breakdown']['comparable_baseline_label']}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -301,33 +305,33 @@ with tab_predict:
         st.markdown(f"""
         <div class="stat-pill">
             <div class="stat-lbl">Age Depreciation Impact</div>
-            <div class="stat-val" style="color: #f87171;">-{age_pct:.1f}%</div>
-            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px;">-{annual_dep:.1f}% per year over {prediction['age']:.1f} yrs</div>
+            <div class="stat-val" style="color: #dc2626;">-{age_pct:.1f}%</div>
+            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px; font-weight: 500;">-{annual_dep:.1f}% per year over {prediction['age']:.1f} yrs</div>
         </div>
         """, unsafe_allow_html=True)
         
     with c3:
         mileage_adj = prediction['breakdown']['mileage_adj_pct']
         ref_km = prediction['breakdown']['mileage_ref_km']
-        mile_color = "#fb923c" if mileage_adj < 0 else "#34d399"
+        mile_color = "#ea580c" if mileage_adj < 0 else "#16a34a"
         mile_sign = "" if mileage_adj < 0 else "+"
         st.markdown(f"""
         <div class="stat-pill">
             <div class="stat-lbl">Mileage Adjustment vs {ref_km//1000}k km</div>
             <div class="stat-val" style="color: {mile_color};">{mile_sign}{mileage_adj:.1f}%</div>
-            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px;">Price impact of {odometer_val:,.0f} km vs {ref_km:,} km ref</div>
+            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px; font-weight: 500;">Price impact of {odometer_val:,.0f} km vs {ref_km:,} km ref</div>
         </div>
         """, unsafe_allow_html=True)
         
     with c4:
         prem_pct = prediction['breakdown']['model_premium_pct']
-        color = "#34d399" if prem_pct >= 0 else "#f87171"
+        color = "#16a34a" if prem_pct >= 0 else "#dc2626"
         sign = "+" if prem_pct >= 0 else ""
         st.markdown(f"""
         <div class="stat-pill">
             <div class="stat-lbl">Model Premium / Brand Adj</div>
             <div class="stat-val" style="color: {color};">{sign}{prem_pct:.1f}%</div>
-            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px;">Shrinkage adjusted random effect</div>
+            <div style="color: #64748b; font-size: 0.75rem; margin-top: 4px; font-weight: 500;">Shrinkage adjusted random effect</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -352,8 +356,8 @@ with tab_predict:
             x=list(sim_odos) + list(sim_odos[::-1]),
             y=list(y_high) + list(y_low[::-1]),
             fill='toself',
-            fillcolor='rgba(56, 189, 248, 0.12)',
-            line=dict(color='rgba(255,255,255,0)'),
+            fillcolor='rgba(2, 132, 199, 0.12)',
+            line=dict(color='rgba(2, 132, 199, 0.45)', width=1.5, dash='dot'),
             name='±1σ Expected Range (~28%)',
             hoverinfo='skip'
         ))
@@ -362,7 +366,7 @@ with tab_predict:
             x=sim_odos,
             y=y_expected,
             mode='lines',
-            line=dict(color='#38bdf8', width=3),
+            line=dict(color='#0284c7', width=3.5),
             name='Expected Forecast'
         ))
         # Current vehicle marker
@@ -370,7 +374,7 @@ with tab_predict:
             x=[odometer_val],
             y=[prediction['expected_price']],
             mode='markers',
-            marker=dict(size=14, color='#f59e0b', symbol='star', line=dict(color='#ffffff', width=2)),
+            marker=dict(size=16, color='#f59e0b', symbol='star', line=dict(color='#78350f', width=2)),
             name=f'Current Config ({odometer_val:,.0f} km)'
         ))
         
@@ -381,21 +385,48 @@ with tab_predict:
                 x=comps_df['ODO METER'],
                 y=comps_df['FINAL BID VALUE'],
                 mode='markers',
-                marker=dict(size=9, color='#34d399', opacity=0.85, line=dict(color='#064e3b', width=1)),
+                marker=dict(size=10, color='#10b981', opacity=0.9, line=dict(color='#065f46', width=1.5)),
                 name='Historical AP/TS Auctions',
                 text=[f"Reg {y} | {v}" for y, v in zip(comps_df['YEAR'], comps_df['VEH NO'])],
                 hovertemplate="<b>%{text}</b><br>Odo: %{x:,.0f} km<br>Final Bid: ₹%{y:,.0f}<extra></extra>"
             ))
             
         fig.update_layout(
-            template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(15, 23, 42, 0.6)',
-            xaxis=dict(title="Odometer Reading (KM)", gridcolor='rgba(255,255,255,0.06)'),
-            yaxis=dict(title="Final Bid Value (₹)", gridcolor='rgba(255,255,255,0.06)'),
+            paper_bgcolor='#ffffff',
+            plot_bgcolor='#f8fafc',
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#0f172a', size=12),
+            xaxis=dict(
+                title=dict(text="Odometer Reading (KM)", font=dict(color='#0f172a', size=13)),
+                tickfont=dict(color='#334155', size=11),
+                gridcolor='#e2e8f0',
+                linecolor='#cbd5e1',
+                linewidth=1.5,
+                separatethousands=True,
+                zeroline=False
+            ),
+            yaxis=dict(
+                title=dict(text="Final Bid Value (₹)", font=dict(color='#0f172a', size=13)),
+                tickfont=dict(color='#334155', size=11),
+                gridcolor='#e2e8f0',
+                linecolor='#cbd5e1',
+                linewidth=1.5,
+                tickprefix='₹ ',
+                separatethousands=True,
+                zeroline=False
+            ),
             hovermode='x unified',
-            margin=dict(l=20, r=20, t=30, b=20),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            margin=dict(l=40, r=20, t=40, b=30),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                font=dict(color='#0f172a', size=11),
+                bgcolor='rgba(255, 255, 255, 0.95)',
+                bordercolor='#cbd5e1',
+                borderwidth=1
+            )
         )
         st.plotly_chart(fig, use_container_width=True)
         
@@ -412,8 +443,8 @@ with tab_predict:
             x=list(sim_years) + list(sim_years[::-1]),
             y=list(y_high) + list(y_low[::-1]),
             fill='toself',
-            fillcolor='rgba(56, 189, 248, 0.12)',
-            line=dict(color='rgba(255,255,255,0)'),
+            fillcolor='rgba(2, 132, 199, 0.12)',
+            line=dict(color='rgba(2, 132, 199, 0.45)', width=1.5, dash='dot'),
             name='±1σ Expected Range (~28%)',
             hoverinfo='skip'
         ))
@@ -421,14 +452,15 @@ with tab_predict:
             x=sim_years,
             y=y_expected,
             mode='lines+markers',
-            line=dict(color='#38bdf8', width=3),
+            line=dict(color='#0284c7', width=3.5),
+            marker=dict(size=6, color='#0284c7'),
             name='Expected Forecast'
         ))
         fig.add_trace(go.Scatter(
             x=[selected_year],
             y=[prediction['expected_price']],
             mode='markers',
-            marker=dict(size=14, color='#f59e0b', symbol='star', line=dict(color='#ffffff', width=2)),
+            marker=dict(size=16, color='#f59e0b', symbol='star', line=dict(color='#78350f', width=2)),
             name=f'Current Config ({selected_year})'
         ))
         
@@ -438,21 +470,48 @@ with tab_predict:
                 x=comps_df['YEAR'],
                 y=comps_df['FINAL BID VALUE'],
                 mode='markers',
-                marker=dict(size=9, color='#34d399', opacity=0.85, line=dict(color='#064e3b', width=1)),
+                marker=dict(size=10, color='#10b981', opacity=0.9, line=dict(color='#065f46', width=1.5)),
                 name='Historical AP/TS Auctions',
                 text=[f"Odo: {o:,.0f} km | {v}" for o, v in zip(comps_df['ODO METER'], comps_df['VEH NO'])],
                 hovertemplate="<b>%{text}</b><br>Year: %{x}<br>Final Bid: ₹%{y:,.0f}<extra></extra>"
             ))
             
         fig.update_layout(
-            template='plotly_dark',
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(15, 23, 42, 0.6)',
-            xaxis=dict(title="Registration Year", dtick=2, gridcolor='rgba(255,255,255,0.06)'),
-            yaxis=dict(title="Final Bid Value (₹)", gridcolor='rgba(255,255,255,0.06)'),
+            paper_bgcolor='#ffffff',
+            plot_bgcolor='#f8fafc',
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#0f172a', size=12),
+            xaxis=dict(
+                title=dict(text="Registration Year", font=dict(color='#0f172a', size=13)),
+                tickfont=dict(color='#334155', size=11),
+                dtick=2,
+                gridcolor='#e2e8f0',
+                linecolor='#cbd5e1',
+                linewidth=1.5,
+                zeroline=False
+            ),
+            yaxis=dict(
+                title=dict(text="Final Bid Value (₹)", font=dict(color='#0f172a', size=13)),
+                tickfont=dict(color='#334155', size=11),
+                gridcolor='#e2e8f0',
+                linecolor='#cbd5e1',
+                linewidth=1.5,
+                tickprefix='₹ ',
+                separatethousands=True,
+                zeroline=False
+            ),
             hovermode='x unified',
-            margin=dict(l=20, r=20, t=30, b=20),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            margin=dict(l=40, r=20, t=40, b=30),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                font=dict(color='#0f172a', size=11),
+                bgcolor='rgba(255, 255, 255, 0.95)',
+                bordercolor='#cbd5e1',
+                borderwidth=1
+            )
         )
         st.plotly_chart(fig, use_container_width=True)
 
