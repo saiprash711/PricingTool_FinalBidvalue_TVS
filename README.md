@@ -51,7 +51,7 @@ The model decomposes every vehicle's fair market bid into four actionable, trans
 
 | Valuation Component | Model Calibration | Operational Interpretation |
 | :--- | :--- | :--- |
-| **Market Baseline Price** | $\exp(\beta_0) \approx \text{₹ } 48.3 \text{ Lakhs}$ | Theoretical baseline intercept for a hypothetical 0-year, 0-km asset prior to age/mileage scaling. |
+| **Comparable Market Baseline** | Empirical Median Comps | Benchmark based on historical auction sales of that specific vehicle model (or brand prior if rare), grounding the valuation in real market comps. |
 | **Annual Depreciation** | $-11.9\% \text{ per year}$ | Compound annual depreciation rate across the market portfolio ($\exp(-0.1269) - 1$). |
 | **Mileage Elasticity** | $-0.166 \text{ elasticity}$ | Each $10\%$ increase in odometer reading discounts the bid price by $\approx 1.66\%$ relative to standard benchmark usage ($50,000 \text{ km}$). |
 | **Make/Model Premium** | $\exp(u_{\text{make\_model}}) - 1$ | Specific brand equity and liquidity premium/discount relative to the market baseline. |

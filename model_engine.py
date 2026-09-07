@@ -54,6 +54,11 @@ def train_and_save_model(data_path=DATA_FILE, model_path=MODEL_FILE):
         effects = [random_effects[m] for m in brand_models if m in random_effects]
         brand_effects[brand] = float(np.mean(effects)) if len(effects) > 0 else 0.0
 
+    # Precompute medians for intuitive comparable baselines
+    model_medians = {k: float(v) for k, v in df.groupby('make_model')['FINAL BID VALUE'].median().items()}
+    brand_medians = {k: float(v) for k, v in df.groupby('MAKE')['FINAL BID VALUE'].median().items()}
+    overall_median = float(df['FINAL BID VALUE'].median())
+
     # Calculate in-sample metrics
     fitted_prices = []
     actual_prices = df['FINAL BID VALUE'].values
@@ -126,6 +131,9 @@ def train_and_save_model(data_path=DATA_FILE, model_path=MODEL_FILE):
         'brand_effects': brand_effects,
         'model_counts': model_counts,
         'brand_counts': brand_counts,
+        'model_medians': model_medians,
+        'brand_medians': brand_medians,
+        'overall_median': overall_median,
         'sigma_eps': sigma_eps,
         'sigma_group': sigma_group,
         'metrics': metrics
@@ -148,6 +156,9 @@ class VehiclePricePredictor:
         self.brand_effects = self.payload['brand_effects']
         self.model_counts = self.payload['model_counts']
         self.brand_counts = self.payload['brand_counts']
+        self.model_medians = self.payload.get('model_medians', {})
+        self.brand_medians = self.payload.get('brand_medians', {})
+        self.overall_median = self.payload.get('overall_median', 187000.0)
         self.sigma_eps = self.payload['sigma_eps']
         self.sigma_group = self.payload['sigma_group']
         self.metrics = self.payload['metrics']
@@ -238,6 +249,32 @@ class VehiclePricePredictor:
         odo_vs_ref = np.exp(b_odo * (log_odo - np.log(ref_odo)))
         mileage_adj_pct = (odo_vs_ref - 1.0) * 100  # positive = more km = lower price
         
+        # Comparable Market Baseline (Median of similar auction sales)
+        if self.df is not None and len(self.df) > 0:
+            exact_matches = self.df[(self.df['MAKE'].str.strip().str.lower() == make_clean.lower()) & 
+                                    (self.df['MODEL'].str.strip().str.lower() == model_clean.lower())]
+            if len(exact_matches) > 0:
+                comp_price = float(exact_matches['FINAL BID VALUE'].median())
+                comp_label = f"Median of similar {model_clean} sales"
+            else:
+                brand_matches = self.df[self.df['MAKE'].str.strip().str.lower() == make_clean.lower()]
+                if len(brand_matches) > 0:
+                    comp_price = float(brand_matches['FINAL BID VALUE'].median())
+                    comp_label = f"Median of similar {make_clean} sales"
+                else:
+                    comp_price = float(self.df['FINAL BID VALUE'].median())
+                    comp_label = "Median across all auction sales"
+        else:
+            if mm_key in self.model_medians:
+                comp_price = float(self.model_medians[mm_key])
+                comp_label = f"Median of similar {model_clean} sales"
+            elif make_clean in self.brand_medians:
+                comp_price = float(self.brand_medians[make_clean])
+                comp_label = f"Median of similar {make_clean} sales"
+            else:
+                comp_price = float(self.overall_median)
+                comp_label = "Median across all auction sales"
+
         # Rounding for clean display
         return {
             'expected_price': round(float(expected_price)),
@@ -257,6 +294,8 @@ class VehiclePricePredictor:
             'sigma_pred': float(sigma_pred),
             'sigma_eps': self.sigma_eps,
             'breakdown': {
+                'comparable_baseline_price': int(round(float(comp_price))),
+                'comparable_baseline_label': comp_label,
                 'base_market_price': int(round(float(base_market_price))),
                 'age_depreciation_pct': float(round((1.0 - age_multiplier) * 100, 1)),
                 'annual_depreciation_pct': float(round(annual_dep_pct, 1)),

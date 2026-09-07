@@ -263,7 +263,7 @@ with tab_predict:
                     {format_inr(prediction['range_low_1sigma'])} &ndash; {format_inr(prediction['range_high_1sigma'])}
                 </div>
                 <div style="color: #64748b; font-size: 0.78rem; margin-top: 2px;">
-                    Honest 68% probability density band recommended by the AI
+                    Honest 68% probability density band based on residual variance
                 </div>
             </div>
             <div style="text-align: right;">
@@ -289,9 +289,9 @@ with tab_predict:
     with c1:
         st.markdown(f"""
         <div class="stat-pill">
-            <div class="stat-lbl">Market Baseline Model Price</div>
-            <div class="stat-val">{format_inr(prediction['breakdown']['base_market_price'])}</div>
-            <div style="color: var(--text-color); font-size: 0.75rem; margin-top: 4px;">Theoretical zero-age/zero-km baseline</div>
+            <div class="stat-lbl">Comparable Market Baseline</div>
+            <div class="stat-val">{format_inr(prediction['breakdown']['comparable_baseline_price'])}</div>
+            <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">{prediction['breakdown']['comparable_baseline_label']}</div>
         </div>
         """, unsafe_allow_html=True)
         
