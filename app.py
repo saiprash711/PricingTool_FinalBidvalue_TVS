@@ -134,8 +134,11 @@ def format_inr(val):
     return f"₹ {','.join(chunks)}"
 
 @st.cache_resource
-def load_engine():
-    return VehiclePricePredictor()
+def load_engine(_version="v2_force_reload"):
+    import importlib
+    import model_engine
+    importlib.reload(model_engine)
+    return model_engine.VehiclePricePredictor()
 
 predictor = load_engine()
 catalog = predictor.get_catalog()
@@ -289,19 +292,38 @@ with tab_predict:
     
     # 2. Key Value Drivers Decomposition
     st.markdown("#### ⚖️ Valuation Driver Decomposition")
+    bd = prediction.get('breakdown', {})
+    
+    # Safe fallback for comparable market baseline
+    if 'comparable_baseline_price' in bd:
+        comp_price_val = bd['comparable_baseline_price']
+        comp_price_lbl = bd.get('comparable_baseline_label', f"Median of similar {selected_model} sales")
+    else:
+        comps = predictor.get_historical_comps(selected_make, selected_model)
+        if len(comps) > 0:
+            comp_price_val = int(round(comps['FINAL BID VALUE'].median()))
+            comp_price_lbl = f"Median of similar {selected_model} sales"
+        else:
+            comp_price_val = int(round(prediction.get('expected_price', 250000)))
+            comp_price_lbl = f"Benchmark estimate for {selected_model}"
+
+    age_pct = bd.get('age_depreciation_pct', 0.0)
+    annual_dep = bd.get('annual_depreciation_pct', 0.0)
+    mileage_adj = bd.get('mileage_adj_pct', 0.0)
+    ref_km = bd.get('mileage_ref_km', 50000)
+    prem_pct = bd.get('model_premium_pct', 0.0)
+
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown(f"""
         <div class="stat-pill">
             <div class="stat-lbl">Comparable Market Baseline</div>
-            <div class="stat-val">{format_inr(prediction['breakdown']['comparable_baseline_price'])}</div>
-            <div style="color: #475569; font-size: 0.75rem; margin-top: 4px; font-weight: 600;">{prediction['breakdown']['comparable_baseline_label']}</div>
+            <div class="stat-val">{format_inr(comp_price_val)}</div>
+            <div style="color: #475569; font-size: 0.75rem; margin-top: 4px; font-weight: 600;">{comp_price_lbl}</div>
         </div>
         """, unsafe_allow_html=True)
         
     with c2:
-        age_pct = prediction['breakdown']['age_depreciation_pct']
-        annual_dep = prediction['breakdown']['annual_depreciation_pct']
         st.markdown(f"""
         <div class="stat-pill">
             <div class="stat-lbl">Age Depreciation Impact</div>
@@ -311,8 +333,6 @@ with tab_predict:
         """, unsafe_allow_html=True)
         
     with c3:
-        mileage_adj = prediction['breakdown']['mileage_adj_pct']
-        ref_km = prediction['breakdown']['mileage_ref_km']
         mile_color = "#ea580c" if mileage_adj < 0 else "#16a34a"
         mile_sign = "" if mileage_adj < 0 else "+"
         st.markdown(f"""
@@ -324,7 +344,6 @@ with tab_predict:
         """, unsafe_allow_html=True)
         
     with c4:
-        prem_pct = prediction['breakdown']['model_premium_pct']
         color = "#16a34a" if prem_pct >= 0 else "#dc2626"
         sign = "+" if prem_pct >= 0 else ""
         st.markdown(f"""
