@@ -87,25 +87,76 @@ def get_logo_base64():
     return ""
 
 
-def _get_login_credentials():
-    """Read access credentials from Streamlit secrets or environment variables.
+DEFAULT_AUTH_USERS: dict[str, str] = {
+    "tc014@tvs.in": "TVS@2026",
+    "tc100@tvs.in": "TVS@2026",
+    "admin@tvscertified.com": "TVS@2026",
+}
 
-    Streamlit secrets take precedence so production credentials never need to
-    appear in source control. Environment variables make local deployments
-    easy to configure as well.
+
+def _get_authorized_users() -> dict[str, str]:
+    """Read access credentials from Streamlit secrets, environment variables, or defaults.
+
+    Streamlit secrets and environment variables can extend or override default accounts.
+    Returns a dict mapping normalized (lowercase) email/username to password.
     """
+    users: dict[str, str] = {k.lower(): v for k, v in DEFAULT_AUTH_USERS.items()}
     try:
         auth_secrets = st.secrets.get("auth", {})
-    except st.errors.StreamlitSecretNotFoundError:
-        auth_secrets = {}
-    username = os.getenv("TVS_LOGIN_USERNAME", auth_secrets.get("username", ""))
-    password = os.getenv("TVS_LOGIN_PASSWORD", auth_secrets.get("password", ""))
-    return str(username), str(password)
+        if isinstance(auth_secrets, dict):
+            # Check for multi-user dict under auth.users
+            sec_users = auth_secrets.get("users", {})
+            if isinstance(sec_users, dict):
+                for u, p in sec_users.items():
+                    if u and p:
+                        users[str(u).strip().lower()] = str(p)
+            # Legacy single user in auth section
+            sec_user = auth_secrets.get("username")
+            sec_pass = auth_secrets.get("password")
+            if sec_user and sec_pass:
+                users[str(sec_user).strip().lower()] = str(sec_pass)
+
+        # Check top-level users dict
+        top_users = st.secrets.get("users", {})
+        if isinstance(top_users, dict):
+            for u, p in top_users.items():
+                if u and p:
+                    users[str(u).strip().lower()] = str(p)
+    except Exception:
+        pass
+
+    env_user = os.getenv("TVS_LOGIN_USERNAME")
+    env_pass = os.getenv("TVS_LOGIN_PASSWORD")
+    if env_user and env_pass:
+        users[env_user.strip().lower()] = env_pass
+
+    return users
+
+
+def _verify_user_credentials(entered_username: str, entered_password: str) -> bool:
+    """Safely verify user credentials using constant-time comparison."""
+    if not entered_username or not entered_password:
+        return False
+    users = _get_authorized_users()
+    expected_password = users.get(entered_username.strip().lower())
+    if expected_password is not None:
+        return hmac.compare_digest(entered_password, expected_password)
+    return False
+
+
+def _get_login_credentials():
+    """Legacy helper returning primary credentials for backwards compatibility."""
+    users = _get_authorized_users()
+    if "tc100@tvs.in" in users:
+        return "tc100@tvs.in", users["tc100@tvs.in"]
+    if users:
+        k, v = next(iter(users.items()))
+        return k, v
+    return "", ""
 
 
 def _show_login_screen():
     """Render the secure entry experience and return True after sign-in."""
-    configured_username, configured_password = _get_login_credentials()
     st.session_state.setdefault("authenticated", False)
     st.session_state.setdefault("signed_in_user", "")
 
@@ -255,16 +306,17 @@ def _show_login_screen():
                 </div>
                 ''', unsafe_allow_html=True)
                 with st.form("signin_form", border=False):
-                    username = st.text_input("Work email", placeholder="name@tvscertified.com", key="login_username")
+                    username = st.text_input("Work email", placeholder="tc100@tvs.in", key="login_username")
                     password = st.text_input("Password", type="password", placeholder="Enter your password", key="login_password")
                     submitted = st.form_submit_button("Enter workspace  →", type="primary")
 
                 if submitted:
-                    if not configured_username or not configured_password:
-                        st.error("Sign-in has not been configured. Add credentials to `.streamlit/secrets.toml` or set the TVS_LOGIN_USERNAME and TVS_LOGIN_PASSWORD environment variables.")
-                    elif hmac.compare_digest(username.strip(), configured_username) and hmac.compare_digest(password, configured_password):
+                    clean_user = username.strip()
+                    if not clean_user or not password:
+                        st.error("Please enter both your work email and password.")
+                    elif _verify_user_credentials(clean_user, password):
                         st.session_state.authenticated = True
-                        st.session_state.signed_in_user = username.strip()
+                        st.session_state.signed_in_user = clean_user
                         st.rerun()
                     else:
                         st.error("We couldn't verify those details. Please try again.")
