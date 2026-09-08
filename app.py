@@ -1151,6 +1151,19 @@ def reset_sidebar_filters():
     st.session_state['explorer_variant_filter'] = "All Variants"
     st.session_state['explorer_year_filter'] = 2000
     st.session_state['explorer_search'] = ""
+    st.session_state['filter_reset_toast'] = True
+
+def reset_zone_filter():
+    """Reset region/zone filter back to All Tamil Nadu and sync related views."""
+    st.session_state['sidebar_branch'] = "All Tamil Nadu"
+    st.session_state['comps_branch_select'] = "All Tamil Nadu"
+    st.session_state['explorer_branch_filter'] = "All Tamil Nadu"
+    st.session_state['zone_reset_toast'] = True
+
+def set_odo_preset(val):
+    """Callback to set odometer preset value."""
+    st.session_state['odo_input'] = int(val)
+    st.session_state['sidebar_odometer'] = int(val)
 
 def get_active_filter_count():
     """Count how many vehicle parameters or filters differ from baseline defaults."""
@@ -1181,6 +1194,8 @@ def get_active_filter_count():
 
 if st.session_state.pop('filter_reset_toast', False):
     st.toast("✅ All filters and vehicle specifications reset to default baseline!", icon="🔄")
+if st.session_state.pop('zone_reset_toast', False):
+    st.toast("📍 Region filter reset to All Tamil Nadu!", icon="🌐")
 
 # --- SIDEBAR: PROFILE & CONTROLS ---
 signed_user = st.session_state.get("signed_in_user", "")
@@ -1329,12 +1344,13 @@ if selected_branch != "All Tamil Nadu":
     with col_cap1:
         st.caption(f"🎯 Filter applied: **{selected_branch_count:,}** records in **{selected_branch}**")
     with col_cap2:
-        if st.button("Reset Zone", key="btn_clear_zone_quick", help="Reset region filter to All Tamil Nadu", use_container_width=True):
-            st.session_state['sidebar_branch'] = "All Tamil Nadu"
-            st.session_state['comps_branch_select'] = "All Tamil Nadu"
-            st.session_state['explorer_branch_filter'] = "All Tamil Nadu"
-            st.session_state['filter_reset_toast'] = True
-            st.rerun()
+        st.button(
+            "Reset Zone",
+            key="btn_clear_zone_quick",
+            on_click=reset_zone_filter,
+            help="Reset region filter to All Tamil Nadu",
+            use_container_width=True
+        )
 elif active_df is not None:
     st.sidebar.caption(f"🌐 Active: **{len(active_df):,}** records across **Tamil Nadu**")
 
@@ -1347,10 +1363,13 @@ with col_vc_head1:
     st.markdown("<h3 style='margin:0; font-size:1.15rem; font-weight:800;'>🔍 Vehicle Specs</h3>", unsafe_allow_html=True)
 with col_vc_head2:
     top_clear_label = f"🧹 Clear Filters ({active_filter_cnt})" if active_filter_cnt > 0 else "🧹 Clear Filters"
-    if st.button(top_clear_label, key="btn_clear_filters_top", help="Reset all filters and vehicle specifications to baseline defaults", use_container_width=True):
-        reset_sidebar_filters()
-        st.session_state['filter_reset_toast'] = True
-        st.rerun()
+    st.button(
+        top_clear_label,
+        key="btn_clear_filters_top",
+        on_click=reset_sidebar_filters,
+        help="Reset all filters and vehicle specifications to baseline defaults",
+        use_container_width=True
+    )
 
 st.sidebar.markdown("<small style='color: var(--tvs-text-muted);'>Configure vehicle specifications to forecast expected auction final bid:</small>", unsafe_allow_html=True)
 
@@ -1436,20 +1455,11 @@ selected_year = st.sidebar.slider(
 st.sidebar.markdown("4. Odometer Reading (KM)")
 col_p1, col_p2, col_p3 = st.sidebar.columns(3)
 with col_p1:
-    if st.button("45k km", key="btn_odo_45k"):
-        st.session_state['odo_input'] = 45000
-        st.session_state['sidebar_odometer'] = 45000
-        st.rerun()
+    st.button("45k km", key="btn_odo_45k", on_click=set_odo_preset, args=(45000,))
 with col_p2:
-    if st.button("75k km", key="btn_odo_75k"):
-        st.session_state['odo_input'] = 75000
-        st.session_state['sidebar_odometer'] = 75000
-        st.rerun()
+    st.button("75k km", key="btn_odo_75k", on_click=set_odo_preset, args=(75000,))
 with col_p3:
-    if st.button("110k km", key="btn_odo_110k"):
-        st.session_state['odo_input'] = 110000
-        st.session_state['sidebar_odometer'] = 110000
-        st.rerun()
+    st.button("110k km", key="btn_odo_110k", on_click=set_odo_preset, args=(110000,))
 
 if 'odo_input' not in st.session_state:
     st.session_state['odo_input'] = 65000
@@ -1486,15 +1496,13 @@ if 'sidebar_owner' in st.session_state and st.session_state['sidebar_owner'] not
 selected_owner = st.sidebar.selectbox("7. Ownership Count", owner_options, index=0, key="sidebar_owner")
 
 # Clear Filters Action Button (Bottom)
-if st.sidebar.button(
+st.sidebar.button(
     f"🧹 Clear All Filters ({active_filter_cnt})" if active_filter_cnt > 0 else "🧹 Clear All Filters",
     key="btn_clear_filters_bottom",
+    on_click=reset_sidebar_filters,
     help="Reset all filters and vehicle specifications to baseline defaults",
     use_container_width=True
-):
-    reset_sidebar_filters()
-    st.session_state['filter_reset_toast'] = True
-    st.rerun()
+)
 
 # Reference calendar year
 reference_year = 2026
